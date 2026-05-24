@@ -418,15 +418,3 @@ states_table = [
 %     This is the \textbf{passive} flavor in action: the FSM tracks the node's state and gates its callbacks; the orchestration logic lives elsewhere.
 %   \end{block}
 % \end{frame}
-
-% --- Wrap-up ---
-\begin{frame}{Wrap-up}
-  \justifying
-  Takeaways from this section:
-  \begin{itemize}
-    \item \textbg{FSMs} are the \textbg{simplest} and most formal model for orchestration;
-    \item the \textbg{passive vs active} distinction matters: \textbg{only active FSMs are full executors};
-    \item \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}} gives \textbg{ROS~2-aware active machines} with a clean executor pattern;
-    \item \textbg{beyond a certain complexity threshold}, the FSM model becomes a \textbg{liability} rather than an asset.
-  \end{itemize}
-\end{frame}

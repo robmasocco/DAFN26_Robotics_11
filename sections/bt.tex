@@ -386,33 +386,78 @@
 \end{frame}
 
 % --- Use case: Leonardo Drone Contest ---
-\begin{frame}{Use case: Leonardo Drone Contest}{Overview}
-  % TODO: contest, year, what changed from last year's mission.
-\end{frame}
-\begin{frame}{Use case: Leonardo Drone Contest}{Why the FSM exploded}
-  % TODO: concrete reasons the FSM approach broke down (states count, reactive conditions, recovery branches).
-\end{frame}
-\begin{frame}{Use case: Leonardo Drone Contest}{BT diagram}
-  % TODO: insert the BT diagram image of the contest mission here.
-  \begin{center}
-    \textit{[Behavior tree of the contest mission.]}
-  \end{center}
-\end{frame}
-\begin{frame}{Use case: Leonardo Drone Contest}{Design decisions}
-  % TODO: reactive vs plain controls, where Parallel was used, blackboard layout.
-\end{frame}
-\begin{frame}{Use case: Leonardo Drone Contest}{Results}
-  % TODO: what worked, comparison with the FSM-era effort.
-\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Overview of LDC25}
+  \begin{columns}
+    \column{.5\textwidth}
+    \justifying
+    \begin{itemize}
+      \item \textbg{Localize} ArUco, QR, COCO objects.
+      \item Execute \textbg{tasks} within \textbg{deadlines}.
+        \begin{itemize}
+          \item \textbg{FindTarget} (with pic).
+          \item \textbg{FollowSequence} (with pic).
+          \item \textbg{FindObject} (UGV, with pic).
+          \item \textbg{Loiter} (UAV, with video).
+          \item \textbg{PTZCollab} (with pic).
+          \item \textbg{LandOnHighestSpot} (UAV, with pic).
+          \item \textbr{EmergencyLanding} (UAV).
+          \item \textbr{ReturnToBase} (UGV).
+        \end{itemize}
+    \end{itemize}
 
-% --- Wrap-up ---
-\begin{frame}{Wrap-up}
+    \column{.5\textwidth}
+    \begin{figure}
+      \centering
+      \includegraphics[width=\linewidth]{ldc25_intro.jpg}
+      \caption{Corinna (UAV) and DottorCane (UGV).}
+      \label{fig:ldc25intro}
+    \end{figure}
+  \end{columns}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{BT design choices of LDC25}
   \justifying
-  Takeaways from this section:
   \begin{itemize}
-    \item \textbg{behavior trees} replace ``one state at a time'' with ``one tree, ticked'';
-    \item \textbg{control nodes} (Sequence, Fallback, Parallel, with their reactive variants) provide the calculus, \textbg{leaves} provide the substance, \textbg{decorators} the connective tissue;
-    \item \href{https://github.com/BehaviorTree/BehaviorTree.CPP}{\color{blue}\underline{\texttt{BehaviorTree.CPP}}} is the de-facto C++ library; \href{https://github.com/dotX-Automation/dua_behaviortree_cpp}{\color{blue}\underline{\texttt{dua\_behaviortree\_cpp}}} integrates it as a ROS~2 composable executor with \texttt{pluginlib}-loaded nodes;
-    \item the same \textbg{executor pattern} we already saw in \texttt{transitions\_ros} reappears: a generic engine, domain logic loaded at runtime.
+    \item Deploy a \textbg{BT on each agent}, both sharing a \textbg{similar structure}.
+    \item Code \textbg{tasks} into a \textbg{reusable custom nodes library}.
+    \item Wrap a \textbg{task scheduling subtree} inside an agent-specific BT which handles safe initialization and shutdown.
+  \end{itemize}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{BT diagram of LDC25}
+  \begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{ldc25_btstruct.pdf}
+    \caption{High-level view of the agent-agnostic BT structure: the Lifecycle Root level waits for mission start, arms, then finally disarms the robot; the Mission Coordination level initializes the agent (\emph{e.g.}, takes off), performs the mission watching for a stop command, and finalizes the agent (\emph{e.g.}, lands safely); the Task Dispatch level runs until halted, selecting and executing tasks issued by the Ground Control Station.}
+    \label{fig:ldc25btstruct}
+  \end{figure}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Strategy of LDC25}
+  \justifying
+  \begin{itemize}
+    \item At each tick, \textbg{Task Scheduler selects the best task node} which is then ticked.
+    \item If the scheduling selection changes, \textbg{preemption} is achieved by \textbg{halting} the running node.
+    \item The \textbg{scheduling policy} is based on three \textbg{tiers}.
+      \begin{enumerate}
+        \item \textbg{Emergency tasks:} non-preemptable \texttt{SyncActionNodes}, always selected first.
+        \item \textbg{Tasks with non-preemptable portions:} \texttt{StatefulActionNodes} that may retain control (\emph{i.e.}, \texttt{onRunning()} does not return until a critical operation is completed).
+        \item \textbg{All other tasks}: evaluated by a cost function with a hysteresis margin.
+      \end{enumerate}
+    \item Tier 3 cost function evaluates \textbg{distance} and an \textbg{educated guess of the score}.
+    \item If no valid task is available, an \textbg{idle task} of \textbg{persistent exploration} is executed.
+    \item \textbg{Agents share information} on detected targets: each Task Scheduler keeps a \textbg{database of found targets}, used to \textbg{navigate directly to known targets} when relevant tasks are issued.
+  \end{itemize}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Task scheduling and execution performance of LDC25}
+  \begin{figure}
+    \centering
+    \includegraphics[width=.86\linewidth]{ldc25_tasksresult.pdf}
+    \label{fig:ldc25taskresult}
+  \end{figure}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Task scheduling and execution performance of LDC25}
+  \justifying
+  \begin{itemize}
+    \item Over a 20 minutes manche, 23 tasks were issued and 20 were completed successfully, yielding a \textbg{completion rate of 87\%}.
+    \item Thanks to the \textbg{idle exploration task}, 13 out of 19 valid manche targets were \textbg{found in the first \SI{60}{\second}}, requiring \textbg{10 times less time}.
+    \item \textbg{Emergency tasks} were always \textbg{scheduled immediately} and completed successfully.
   \end{itemize}
 \end{frame}
