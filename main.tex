@@ -1,0 +1,65 @@
+% DAFN26 - Robotics - Lecture 11
+% Roberto Masocco <roberto.masocco@uniroma2.it>
+% May 24, 2026
+
+\documentclass[aspectratio=169]{beamer}
+
+% Slides layout
+\usepackage[
+    title={Automata},
+    subtitle={From state machines to agentic AI},
+    event={DAFN},
+    author={Roberto Masocco},
+    longauthor={Roberto Masocco},
+    email={roberto.masocco@uniroma2.it},
+    institute={Tor Vergata},
+    longinstitute={Tor Vergata University of Rome},
+    department={Department of Civil Engineering and Computer Science Engineering},
+    researchgroup={},
+    date={June 3, 2026}
+]{utvengbeamer}
+
+% Code listings settings
+\usepackage[nomath]{lmodern}
+\definecolor{codegreen}{rgb}{0 0.5 0}
+\definecolor{codered}{rgb}{1 0 0}
+\definecolor{codeocher}{rgb}{0.8 0.47 0.13}
+\usepackage{listings}
+\lstdefinestyle{codebeamer}{
+    basicstyle=\ttfamily\small,
+    commentstyle=\color{codegreen},
+    breakatwhitespace=false,
+    captionpos=b,
+    frame=lines,
+    keepspaces=true,
+    keywordstyle=\color{codered}\bfseries,
+    numbers=left,
+    numbersep=5pt,
+    numberstyle=\footnotesize,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    stringstyle=\color{codeocher},
+    tabsize=2
+}
+\lstset{style=codebeamer}
+\lstdefinelanguage{ros2msg}{
+  alsoletter={[, ], _, /},
+  morecomment=[l][\color{codegreen}]{\#},
+  morekeywords={int64, uint32, string, uint8, uint8[], int32, int32[], std_msgs/Header}
+}
+
+\usepackage{hyperref}
+
+\begin{document}
+
+% --- Title page ---
+\frame{\titlepage}
+
+% --- Table of contents ---
+\begin{frame}
+\frametitle{Roadmap}
+\tableofcontents
+\end{frame}
+
+\end{document}
