@@ -1,3 +1,432 @@
-% Finite-State Machines
+% Section 1 - Finite-state machines
 % Roberto Masocco <roberto.masocco@uniroma2.it>
 % May 24, 2026
+
+% ### Finite-state machines ###
+\section{Finite-state machines}
+\graphicspath{{figs/section1/}}
+
+% --- Automata in robotic systems ---
+\begin{frame}{Automata in robotic systems}
+  \justifying
+  Beyond the lower layers of perception, planning and control, every modern \textbg{autonomous system} needs an \textbg{orchestration layer}: the top of the stack where everything has become a software abstraction, \textbg{user input} can be parsed, and the \textbg{mission} is executed.\\
+  \bigskip
+  This deck presents this layer through \textbg{three families}.
+  \begin{itemize}
+    \item \textbg{Finite-state machines}: the traditional starting point.
+    \item \textbg{Behavior trees}: when FSMs become unwieldy.
+    \item \textbg{LLM-based agents}: a glimpse of where the field is heading.
+  \end{itemize}
+  \bigskip
+  \begin{block}{}
+    \centering
+    We use the term \textbf{automata} for this layer.\\
+    This is unrelated to the formal-language automata seen in other courses.
+  \end{block}
+\end{frame}
+\begin{frame}{Automata in robotic systems}{Section roadmap}
+  \justifying
+  In this section, we focus on \textbg{finite-state machines}, covering
+  \begin{itemize}
+    \item formal \textbg{definition} and \textbg{representations};
+    \item the \textbg{passive} vs \textbg{active} distinction;
+    \item an active FSM \textbg{implementation} with ROS 2 capabilities via \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}};
+    \item a \textbg{real use case} from the Leonardo Drone Contest;
+    \item where this approach starts to \textbg{break down}.
+  \end{itemize}
+\end{frame}
+
+% --- Finite-state machines ---
+\begin{frame}{Finite-state machines}{Definition}
+  \justifying
+  An FSM is a \textbg{mathematical model of computation}.
+  \begin{block}{Formal definition}
+    \justifying
+    A finite-state machine is a tuple $(S, \Sigma, \delta, s_0, F)$, where
+    \begin{itemize}
+      \item $S$ is a finite set of \textbf{states};
+      \item $\Sigma$ is a finite set of \textbf{input symbols} (events, triggers);
+      \item $\delta : S \times \Sigma \to S$ is the \textbf{transition function};
+      \item $s_0 \in S$ is the \textbf{initial state};
+      \item $F \subseteq S$ is the set of \textbf{terminal} (or accepting) \textbf{states}.
+    \end{itemize}
+  \end{block}
+  At any time the machine is in \textbg{exactly one state} from $S$; an incoming event triggers a transition according to $\delta$.
+\end{frame}
+\begin{frame}{Finite-state machines}{The transition table}
+  \justifying
+  In practice, $\delta$ is encoded as a \textbg{table}: each \textbg{row} associates a \textbg{source state}, a \textbg{trigger}, and a \textbg{destination state}.\\
+  \bigskip
+  This is the form FSMs take in code: a \textbg{list} of triples, easy to read and easy to extend.\\
+  \bigskip
+  $\delta$ must be \textbg{well-defined}: every (state, trigger) pair must have at most one outgoing transition, otherwise the machine is non-deterministic and a different formalism is needed.
+\end{frame}
+\begin{frame}{Finite-state machines}{Diagrammatic representation}
+  \justifying
+  FSMs are usually drawn as \textbg{directed graphs}: circles are states, arrows are transitions labeled with the triggering event. An incoming arrow with no source marks the \textbg{initial state}; a double circle marks a \textbg{terminal state}.
+  \begin{figure}
+    \centering
+    \begin{tikzpicture}[
+      ->, semithick, node distance=3.5cm,
+      st/.style={circle, draw=blue!60, fill=blue!10, thick, minimum size=1.2cm}
+    ]
+      \node[st] (idle) {IDLE};
+      \node[st] (moving) [right=of idle] {MOVING};
+      \node[st, double, double distance=1.5pt] (arrived) [right=of moving] {ARRIVED};
+      \draw[->] (-1.3,0) -- (idle);
+      \path
+        (idle) edge node[above] {start} (moving)
+        (moving) edge node[above] {reached} (arrived)
+        (moving) edge[bend left=40] node[below] {abort} (idle)
+        (arrived) edge[bend left=55] node[below] {reset} (idle);
+    \end{tikzpicture}
+    \caption{A simple 3-state FSM controlling a motion task.}
+  \end{figure}
+\end{frame}
+
+% --- Passive and active FSMs ---
+\begin{frame}{Passive and active FSMs}{Passive}
+  \justifying
+  A \textbg{passive} FSM is a \textbg{data structure}: it \textbg{tracks the state of something} (a component, a process, a robot), and is updated by external code.\\
+  \bigskip
+  \textbg{The FSM itself does not run anything.} It answers questions like the following.
+  \begin{itemize}
+    \item \textbg{Where am I?} (Current state)
+    \item \textbg{Can I do X?} (Is the current state allowed to transition on trigger X?)
+  \end{itemize}
+  \bigskip
+  \begin{block}{}
+    \centering
+    \textbf{Passive FSMs are observers and reporters, not executors.}
+  \end{block}
+\end{frame}
+\begin{frame}{Passive and active FSMs}{Active}
+  \justifying
+  An \textbg{active} FSM \textbg{embeds execution logic}: a routine is associated to each state, and is \textbg{executed when the state is entered}.\\
+  \bigskip
+  The routine's \textbg{return value} becomes the \textbg{trigger} for the next transition.\\
+  The machine \textbg{progresses autonomously} until a \textbg{terminal state} is reached.
+  \begin{block}{}
+    \centering
+    \textbf{Active FSMs are full executors of a mission or process.}
+  \end{block}
+\end{frame}
+
+% --- Active FSMs ---
+\begin{frame}{Active FSMs}{Execution model}
+  \justifying
+  Each step of an \textbg{active FSM} follows a \textbg{fixed cycle}:
+  \begin{enumerate}
+    \item the machine is in a \textbg{state} $s$ with \textbg{associated routine} $R_s$;
+    \item $R_s$ is invoked and \textbg{runs to completion};
+    \item $R_s$ \textbg{returns a trigger} $t \in \Sigma$;
+    \item the machine looks up $\delta(s, t) = s'$ and \textbg{transitions} to $s'$;
+    \item if $s' \in F$ (\emph{i.e.}, it is \textbg{terminal}), the \textbg{machine halts}; otherwise the cycle \textbg{repeats}.
+  \end{enumerate}
+  \bigskip
+  \begin{block}{}
+    \centering
+    \textbf{An FSM run is a sequence of routine calls, threaded together by the transition table.}
+  \end{block}
+\end{frame}
+\begin{frame}{Active FSMs}{Implications}
+  \justifying
+  This execution model has direct consequences:
+  \begin{itemize}
+    \item \textbg{every routine must terminate}, otherwise the machine is stuck;
+    \item \textbg{progress is strictly sequential}: one state, one routine, at a time;
+    \item there is \textbg{no preemption}: while $R_s$ runs, no external event can interrupt it.
+  \end{itemize}
+  \bigskip
+  \begin{alertblock}{Consequence}
+    \justifying
+    \textbr{A routine that must react to multiple conditions has to monitor them explicitly inside its body}: there is no FSM-level mechanism for reacting to events occurring during state execution.
+  \end{alertblock}
+\end{frame}
+
+% --- transitions_ros ---
+\begin{frame}{\texttt{transitions\_ros}}
+  \justifying
+  Our reference implementation is the \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}} Python library, built on top of the popular \href{https://github.com/pytransitions/transitions}{\color{blue}\underline{\texttt{transitions}}} Python package.\\
+  \bigskip
+  Where \texttt{transitions} focuses on FSMs as \textbg{state trackers} attached to arbitrary objects,\\\texttt{transitions\_ros} focuses on the FSM as a \textbg{controller}, and adds
+  \begin{itemize}
+    \item \textbg{full ROS 2 integration}: the machine owns a ROS node and routines can use it to communicate;
+    \item explicit support for the \textbg{active} execution model described before;
+    \item a \textbg{generic executor node} that \textbg{loads an FSM definition at runtime}.
+  \end{itemize}
+\end{frame}
+\begin{frame}{\texttt{transitions\_ros}}{Architecture}
+  \justifying
+  The library is built around \textbg{two ideas}:
+  \begin{itemize}
+    \item a \texttt{Machine} class extending \texttt{transitions.Machine}, that optionally \textbg{holds a ROS 2 node} and \textbg{supports active routines};
+    \item a \textbg{generic ROS 2 node} (\texttt{machine\_executor}) that \textbg{loads an FSM definition from parameters and a Python module}, then \textbg{runs it}.
+  \end{itemize}
+  \bigskip
+  \begin{block}{The executor pattern}
+    \justifying
+    The \textbf{\texttt{machine\_executor}} is \textbf{mission-agnostic}: it knows nothing about the specific FSM it runs.\\
+    The FSM definition lives in a \textbf{separate Python module loaded at machine instantiation}.\\
+    \textbf{Reconfiguring the mission means swapping the module}, not rebuilding the executor.
+  \end{block}
+\end{frame}
+\begin{frame}[fragile]{\texttt{transitions\_ros}}{Defining the transitions table}
+  \begin{columns}
+    \column{.9\textwidth}
+    \begin{lstlisting}[language=Python, caption=Example of transitions table in \texttt{transitions\_ros}.]
+transitions_table = [
+    ['START',        'INIT',          'WAIT_START'],
+    ['READY',        'WAIT_START',    'FIRST_TAKEOFF'],
+    ['AIRBORNE',     'FIRST_TAKEOFF', 'EXPLORE'],
+    # ...
+    ['MISSION_DONE', 'DONE',          'RTH'],
+    ['AT_HOME',      'RTH',           'COMPLETED']
+]
+\end{lstlisting}
+  \end{columns}
+  \bigskip
+  Each \textbg{row} encodes one entry of $\delta$ as \texttt{[trigger, source, destination]}.\\
+  \textbg{Trigger strings are what state routines return} when they want to \textbg{drive the corresponding transition}.
+\end{frame}
+\begin{frame}[fragile]{\texttt{transitions\_ros}}{Defining the states and their routines}
+  \begin{columns}
+    \column{.9\textwidth}
+    \begin{lstlisting}[language=Python, caption=A state routine and a states table.]
+def init_routine(node: MachineExecutorNode,
+                 wait_servers: bool,
+                 timeout_sec: float) -> str:
+    """Wait for the mission start command."""
+    node.get_logger().warn("SYSTEMS ONLINE")
+    # ... do something, possibly use the ROS node ...
+    return 'START'
+
+states_table = [
+    {'name': 'INIT',      'routine': init_routine},
+    {'name': 'RTH',       'routine': rth_routine},
+    {'name': 'COMPLETED', 'routine': completed_routine}
+]
+\end{lstlisting}
+  \end{columns}
+\end{frame}
+\begin{frame}{\texttt{transitions\_ros}}{Runtime considerations}
+  \justifying
+  Once started, the \textbg{executor node}:
+  \begin{itemize}
+    \item \textbg{iterates the active machine} via \texttt{run()}, calling each routine in turn;
+    \item \textbg{exposes the ROS node to the routines}, which can publish, subscribe, call services and actions, and use parameters as any ROS 2 client would;
+    \item \textbg{can be stopped, reconfigured, and restarted} at runtime without rebuilding.
+  \end{itemize}
+  \bigskip
+  \begin{block}{}
+    \centering
+    \textbf{The mission is just Python code that uses ROS and returns the right trigger strings.}
+  \end{block}
+  \bigskip
+  \begin{alertblock}{}
+    \centering
+    \textbr{Such an orchestrator node is usually a client for ROS~2 servers running on the robot.}
+  \end{alertblock}
+\end{frame}
+
+% --- Use case: Leonardo Drone Contest ---
+\begin{frame}{Use case: Leonardo Drone Contest}{Overview of LDC21}
+  \begin{columns}
+    \column{.5\linewidth}
+    \justifying
+    \begin{itemize}
+      \item Indoor 20x10 $\mathrm{m}$ arena with static obstacles.
+      \item 10 ArUco-marked pads are placed in known locations.
+      \item Drone starts from a given pad.
+      \item Drone searches a UGV on the floor with a given marker, and a sequence of numbers.
+      \item Drone reports sequence of scores for each pad to GCS.
+      \item Operators decide a landing sequence, drone executes.
+    \end{itemize}
+
+    \column{.5\linewidth}
+    \begin{figure}
+      \centering
+      \includegraphics[scale=.25]{ldc21_intro.jpg}
+      \caption{René drone on the starting pad (2021).}
+      \label{fig:ldc21intro}
+    \end{figure}
+  \end{columns}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Issues of LDC21}
+  \begin{columns}
+    \column{.5\linewidth}
+    \justifying
+    Mission is linear and without reactive behaviors, but
+    \begin{itemize}
+      \item \textbg{some steps require listening for events}, \emph{e.g.}, a target is found;
+      \item \textbg{must account for every abnormal condition}, \emph{e.g.},
+        \begin{itemize}
+          \item landing pad not found;
+          \item landing pad unreachable;
+        \end{itemize}
+      \item \textbg{user interaction is required} to get the landing sequence.
+    \end{itemize}
+    \textbg{A pure software module is required}, orchestrating execution by calling other modules.
+
+    \column{.5\linewidth}
+    \begin{figure}
+      \centering
+      \includegraphics[scale=.16]{ldc21_issues.jpg}
+      \caption{``Io voglio la roba tua, la roba tua, 'n tanto al chilo, hai capito? La roba tua de 'na volta, voglio che apri tutto. Voglio che smarmelli!'' (R. Ferretti)}
+      % Alcuni vanno a meditare davanti al mare, altri trovano conforto in famiglia, io faccio il limoncello.
+      \label{fig:ldc21issues}
+    \end{figure}
+  \end{columns}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Architecture design of LDC21}
+  \begin{figure}
+    \centering
+    \includesvg[width=.7\linewidth]{ldc21_swarch.svg}
+    \caption{\href{https://ietresearch.onlinelibrary.wiley.com/doi/pdf/10.1049/csy2.12083}{\color{blue}\underline{\textbf{Complete hierarchical software architecture scheme (2021).}}}}
+  \end{figure}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Hierarchical FSM diagram of LDC21 -- outer level}
+  \begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{
+      \begin{tikzpicture}[->,
+                          >=latex,
+                          shorten >=1pt,
+                          auto,
+                          node distance=6cm,
+                          semithick]
+          \node[state] (SETUP)                        {SETUP};
+          \node[state] (RUNNING)   [right of=SETUP]   {RUNNING};
+          \node[state] (TERMINATE) [right of=RUNNING] {TERMINATE};
+          \path[]
+              (SETUP)   edge                      node [above] {start mission}     (RUNNING)
+              (RUNNING) edge [bend left=50]       node [above] {mission completed} (TERMINATE)
+                        edge [bend left=25]       node [above] {takeoff fail}      (TERMINATE)
+                        edge [bend right=25]      node [below] {land fail}         (TERMINATE)
+                        edge [bend right=50]      node [below] {abort mission}     (TERMINATE);
+      \end{tikzpicture}
+    }
+  \end{figure}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Hierarchical FSM diagram of LDC21 -- inner level}
+  \begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{
+        \begin{tikzpicture}[->,
+                            >=latex,
+                            shorten >=1pt,
+                            auto,
+                            node distance=3.5cm,
+                            semithick]
+            \node[state, align=center] (FT)                       {FIRST\\TAKEOFF};
+            \node[state, align=center] (EXPL) [right of=FT]       {EXPLORING};
+            \node[state, align=center] (NAV)  [right of=EXPL]     {NAVIGATING};
+            \node[state, align=center] (PL)   [right of=NAV]      {PRECISION\\LANDING};
+            \node[state, align=center] (LND)  [right of=PL]       {LANDED};
+            \node[state, align=center] (SP)   [below of=PL]       {SEARCH\\PAD};
+            \node[state, align=center] (TK)   [below of=LND]      {TAKEOFF};
+            \path[]
+                (FT)   edge                    node [above]         {tko ok}     (EXPL)
+                (EXPL) edge                    node [above]         {seq}        (NAV)
+                (NAV)  edge [bend left=20]     node [above]         {on pad}     (PL)
+                (PL)   edge [bend left=20]     node [below]         {lnd fail}   (NAV)
+                       edge                    node [above]         {landed}     (LND)
+                       edge [bend left=15]     node [right]         {lost}       (SP)
+                (SP)   edge [bend left=15]     node [left]          {reached}    (PL)
+                       edge [bend left=10]     node [sloped, below] {change pad} (NAV)
+                (LND)  edge                    node [right]         {new pad}    (TK)
+                (TK)   edge [out=-90, in=-90]  node [sloped, below] {airborne}   (NAV);
+        \end{tikzpicture}
+    }
+  \end{figure}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Results of LDC21}
+  \begin{figure}
+    \centering
+    \includegraphics[scale=.27]{ldc21_results.jpeg}
+    \caption{\href{https://www.youtube.com/live/ayUybULDDwg?si=Yu-c7gHcFUIvD-5p&t=9706}{\color{blue}\underline{\textbf{``Dai dai dai!'' (2021).}}}}
+    \label{fig:ldc21results}
+  \end{figure}
+\end{frame}
+\begin{frame}{Use case: Leonardo Drone Contest}{Pain points of LDC23-LDC24}
+  Mission was still linear(-ish) in LDC22, \textbg{things started to get wild from 2023 onwards}:
+  \begin{itemize}
+    \item \textbg{two agents}, a UAV and UGV, sharing a common network;
+    \item \textbg{Human-Machine Interfaces (HMI)} as a requirement;
+    \item \textbg{many more tasks}, some shared between UAV and UGV;
+    \item \textbg{many more asynchronous events} with external triggers;
+    \item \textbg{external software to interface} for mission generation and management.
+  \end{itemize}
+  \bigskip
+  \begin{alertblock}{}
+    \centering
+    \textbr{We started to hit the limits of an FSM.}
+  \end{alertblock}
+\end{frame}
+
+% --- When FSMs stop scaling ---
+\begin{frame}{When FSMs stop scaling}{The qualitative story}
+  \justifying
+  As soon as the mission becomes \textbg{reactive} --- the robot must continuously \textbg{monitor multiple conditions} --- \textbg{FSMs start to show their limitations}:
+  \begin{itemize}
+    \item \textbg{every monitored condition must be checked inside every routine}, or the event is missed;
+    \item \textbg{adding a new condition often means touching many transitions} at once;
+    \item \textbg{recovery and error-handling paths quickly outnumber the nominal ones}.
+  \end{itemize}
+  \bigskip
+  The FSM stops being a clean model of the mission and becomes a \textbg{tangle of spaghetti code}.
+\end{frame}
+\begin{frame}{When FSMs stop scaling}{The quantitative story}
+  \justifying
+  If the robot must independently track $N$ binary conditions, the number of distinct \textbg{combinations of conditions} is $2^N$.\\
+  \bigskip
+  In the worst case, faithfully modeling the mission requires \textbg{one state per combination}: the state space grows \textbg{exponentially}.
+  \begin{alertblock}{State explosion}
+    \centering
+    \textbr{$N = 5$ conditions $\to$ up to $32$ states.}\\
+    \textbr{$N = 10$ conditions $\to$ up to $1024$ states.}
+  \end{alertblock}
+  \bigskip
+  Even with disciplined modeling, the resulting machine is hard to read, hard to test, and hard to evolve.
+\end{frame}
+\begin{frame}{When FSMs stop scaling}{Hierarchical FSMs and statecharts}
+  \justifying
+  The classical mitigation is the \textbg{hierarchical FSM}, or \href{https://www.state-machine.com/doc/Harel87.pdf}{\color{blue}\underline{\textbf{Harel statechart}}}: \textbg{states may contain nested sub-states}, with parallel regions and history points.\\
+  \bigskip
+  This is what one finds in \textbg{industrial tools} (UML state machines, MATLAB Stateflow) and it does tame explosion, but \textbg{the underlying model is still state-centric}:
+  \begin{itemize}
+    \item \textbg{reactivity must still be encoded as transitions};
+    \item \textbg{modularity is limited to nesting};
+    \item \textbg{composition of independent behaviors remains limited} by structural requirements.
+  \end{itemize}
+  \bigskip
+  A different idiom is needed.
+\end{frame}
+
+% --- A different kind of FSM ---
+% \begin{frame}{A different kind of FSM}{ROS 2 lifecycle nodes}
+%   \justifying
+%   Not every FSM in ROS 2 looks like the active machines built so far.\\
+%   \bigskip
+%   \textbg{Lifecycle nodes} (or \textbg{managed nodes}) are nodes whose execution is governed by a \textbg{fixed FSM} provided by the framework:
+%   \begin{center}
+%     \texttt{unconfigured} $\to$ \texttt{inactive} $\to$ \texttt{active} $\to$ \texttt{finalized}
+%   \end{center}
+%   Transitions are triggered \textbg{externally} (by services, by a launcher, by another node) rather than autonomously by a routine.
+%   \begin{block}{}
+%     \justifying
+%     This is the \textbf{passive} flavor in action: the FSM tracks the node's state and gates its callbacks; the orchestration logic lives elsewhere.
+%   \end{block}
+% \end{frame}
+
+% --- Wrap-up ---
+\begin{frame}{Wrap-up}
+  \justifying
+  Takeaways from this section:
+  \begin{itemize}
+    \item \textbg{FSMs} are the \textbg{simplest} and most formal model for orchestration;
+    \item the \textbg{passive vs active} distinction matters: \textbg{only active FSMs are full executors};
+    \item \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}} gives \textbg{ROS~2-aware active machines} with a clean executor pattern;
+    \item \textbg{beyond a certain complexity threshold}, the FSM model becomes a \textbg{liability} rather than an asset.
+  \end{itemize}
+\end{frame}

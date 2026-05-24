@@ -24,29 +24,31 @@
 \definecolor{codegreen}{rgb}{0 0.5 0}
 \definecolor{codered}{rgb}{1 0 0}
 \definecolor{codeocher}{rgb}{0.8 0.47 0.13}
+\usepackage{fancybox}
 \usepackage{listings}
 \lstdefinestyle{codebeamer}{
-    basicstyle=\ttfamily\small,
-    commentstyle=\color{codegreen},
-    breakatwhitespace=false,
-    captionpos=b,
-    frame=lines,
-    keepspaces=true,
-    keywordstyle=\color{codered}\bfseries,
-    numbers=left,
-    numbersep=5pt,
-    numberstyle=\footnotesize,
-    showspaces=false,
-    showstringspaces=false,
-    showtabs=false,
-    stringstyle=\color{codeocher},
-    tabsize=2
+  basicstyle=\ttfamily\small,
+  commentstyle=\color{codegreen},
+  breakatwhitespace=false,
+  captionpos=b,
+  frame=lines,
+  keepspaces=true,
+  keywordstyle=\color{codered}\bfseries,
+  numbers=left,
+  numbersep=5pt,
+  numberstyle=\footnotesize,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  stringstyle=\color{codeocher},
+  tabsize=2
 }
 \lstset{style=codebeamer}
-\lstdefinelanguage{ros2msg}{
+\lstdefinelanguage{btcppxml}{
   alsoletter={[, ], _, /},
   morecomment=[l][\color{codegreen}]{\#},
-  morekeywords={int64, uint32, string, uint8, uint8[], int32, int32[], std_msgs/Header}
+  string=[b]{"},
+  morekeywords={root, BehaviorTree, Sequence, FoodVisible, Approach, Pick, Eat, Eat/, /Sequence, /BehaviorTree, /root}
 }
 
 \usepackage{hyperref}
@@ -61,5 +63,14 @@
 \frametitle{Roadmap}
 \tableofcontents
 \end{frame}
+
+% --- Section 1 ---
+\input{sections/fsm}
+
+% --- Section 2 ---
+\input{sections/bt}
+
+% --- Section 3 ---
+\input{sections/future}
 
 \end{document}

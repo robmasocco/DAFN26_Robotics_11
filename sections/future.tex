@@ -1,0 +1,164 @@
+% Section 3 - Future directions
+% Roberto Masocco <roberto.masocco@uniroma2.it>
+% May 24, 2026
+
+% ### Future directions ###
+\section{Future directions}
+\graphicspath{{figs/section3/}}
+
+% --- Beyond programmed missions ---
+\begin{frame}{Beyond programmed missions}
+  \justifying
+  Both \textbg{Finite-State Machines} and \textbg{Behavior Trees} require the mission to be \textbg{programmed in advance}: a state diagram, a tree XML, a set of routines or leaves. The robot can choose, react, recover --- but \textbg{only along paths a human has spelled out}.\\
+  \bigskip
+  Modern applications increasingly demand:
+  \begin{itemize}
+    \item \textbg{natural-language} or \textbg{multi-modal} mission specifications;
+    \item \textbg{open-world} requests, not enumerable in advance;
+    \item \textbg{on-the-fly assembly of plans} from a library of skills.
+  \end{itemize}
+  \bigskip
+  \textbg{Large Language Models (LLMs)} are starting to fill this gap, by sitting \textbg{on top of} the orchestration layer built so far.
+\end{frame}
+
+% --- LLM agents in robotics ---
+\begin{frame}{LLM agents in robotics}{SayCan: separation of competence}
+  \justifying
+  The canonical example is \href{https://say-can.github.io}{\color{blue}\underline{SayCan}} (Ahn et al., 2022).\\
+  \bigskip
+  \begin{itemize}
+    \item the LLM enumerates candidate \textbg{next actions} in natural language, given the \textbg{high-level goal} and the \textbg{current context};
+    \item a separate \textbg{affordance function}, trained on the robot's actual skills, scores each candidate by \textbg{feasibility in the current state};
+    \item the highest combined-score action is \textbg{dispatched to a low-level skill}.
+  \end{itemize}
+  \bigskip
+  \begin{block}{}
+    \centering
+    The \textbf{LLM} owns \textbf{semantics}; the \textbf{grounded executor} owns \textbf{feasibility}.
+  \end{block}
+\end{frame}
+\begin{frame}{LLM agents in robotics}{Code as Policies and the MCP}
+  \justifying
+  The next step is to give the LLM not a free natural-language channel, but a \textbg{constrained interface} of typed operations.\\
+  \bigskip
+  \href{https://code-as-policies.github.io}{\color{blue}\underline{Code as Policies}} (Liang et al., 2022) has the \textbg{LLM emit Python code} calling a fixed set of perception and control primitives (\texttt{detect\_object}, \texttt{move\_to}, \texttt{pick}, ...).\\
+  \textbg{The robot exposes an API, the LLM writes against it.}\\
+  \bigskip
+  This is now the industry standard for LLM tool use, formalized by the \href{https://modelcontextprotocol.io}{\color{blue}\underline{Model Context Protocol}} (MCP): a robot can run an \textbg{MCP server} that \textbg{publishes its capabilities} to any compliant agent, and \textbg{receives structured calls} in return.
+\end{frame}
+\begin{frame}{LLM agents in robotics}{LLM-driven behavior trees}
+  \justifying
+  An alternative to having the LLM \textbg{execute} actions one at a time is to have it \textbg{author or modify a behavior tree}, which a \textbg{deterministic executor} then runs.\\
+  \bigskip
+  Recent lines of work explore three flavors:
+  \begin{itemize}
+    \item the LLM \textbg{generates} a tree from a natural-language goal, validated and possibly repaired through \textbg{feedback loops};
+    \item the LLM \textbg{parameterizes} a hand-crafted tree (chooses sub-goals, populates the blackboard);
+    \item the LLM \textbg{selects} subtrees from a library of pre-validated behaviors, via function calling.
+  \end{itemize}
+  \bigskip
+  \begin{block}{}
+    \centering
+    The LLM acts as a \textbf{planner}, the BT remains the \textbf{run-time supervisor}.
+  \end{block}
+\end{frame}
+
+% --- An integrated architecture ---
+\begin{frame}{An integrated architecture}{Layers}
+  \justifying
+  A reasonable architecture for an \textbg{agent-driven autonomous robot} integrates everything seen so far, in layers (or \emph{harnesses}):
+  \begin{itemize}
+    \item \textbg{input layer}: \textbg{NLP} and \textbg{scene-understanding} modules turn raw user input (text, voice, images) into a structured high-level request;
+    \item \textbg{agent layer}: an \textbg{LLM} in a tool-use loop, decomposes the request into calls;
+    \item \textbg{interface layer}: \textbg{MCP server} (or a CLI bridge) exposing robot capabilities to the agent;
+    \item \textbg{orchestration layer}: a \textbg{deterministic BT executor} consuming the agent's structured calls;
+    \item \textbg{execution layer}: the \textbg{ROS 2 nodes} that implement algorithms and drive the hardware.
+  \end{itemize}
+  \bigskip
+  Each layer's output feeds the next; \textbg{telemetry and state} flow back up.
+\end{frame}
+\begin{frame}{An integrated architecture}{The stack}
+  \begin{figure}
+    \centering
+    \begin{tikzpicture}[
+      node distance=0.40cm,
+      every node/.style={font=\small},
+      layer/.style={
+        draw, rounded corners=3pt, thick,
+        minimum width=5.8cm, minimum height=0.75cm,
+        align=center
+      },
+      user/.style={layer, fill=gray!15},
+      input/.style={layer, fill=yellow!25},
+      agent/.style={layer, fill=red!15},
+      iface/.style={layer, fill=purple!15},
+      orch/.style={layer, fill=blue!15},
+      exec/.style={layer, fill=green!15},
+      arr/.style={->, thick, >=stealth},
+      feedback/.style={->, thick, dashed, gray!70, >=stealth}
+    ]
+      \node[user] (u) {User / mission goal};
+      \node[input, below=of u] (i) {NLP \& scene comprehension};
+      \node[agent, below=of i] (a) {LLM agent (tool-use loop)};
+      \node[iface, below=of a] (m) {MCP server / CLI bridge};
+      \node[orch, below=of m] (b) {BT executor (deterministic)};
+      \node[exec, below=of b] (r) {ROS 2 nodes / robot hardware};
+
+      \draw[arr] (u) -- (i);
+      \draw[arr] (i) -- (a);
+      \draw[arr] (a) -- (m);
+      \draw[arr] (m) -- (b);
+      \draw[arr] (b) -- (r);
+
+      \node[anchor=west, font=\scriptsize, right=0.25cm of i.east] {voice, text, vision};
+      \node[anchor=west, font=\scriptsize, right=0.25cm of a.east] {tool descriptions};
+      \node[anchor=west, font=\scriptsize, align=left, right=0.25cm of b.east] {state, diagnostics,\\safety enforcement};
+
+      \draw[feedback] (r.west) -- ++(-1.1,0) |- (a.west);
+      \node[font=\scriptsize, gray!70, rotate=90, anchor=south] at (-4.0,-3.3) {telemetry};
+    \end{tikzpicture}
+  \end{figure}
+\end{frame}
+
+% --- Boundaries and open problems ---
+\begin{frame}{Boundaries and open problems}{Why the LLM never gets direct control}
+  \justifying
+  Large language models are powerful semantic engines, but they are \textbg{not suited to drive a robot directly}.
+  \begin{itemize}
+    \item \textbg{Hallucination}: they can confidently invent capabilities, parameters, or world facts that do not exist.
+    \item \textbg{Latency and jitter}: inference times are large and variable, incompatible with control loops.
+    \item \textbg{No formal guarantees}: they cannot enforce timing, safety, or constraint contracts.
+    \item \textbg{No state ownership}: they have no built-in representation of the robot's diagnostics, mode, or safety envelope.
+  \end{itemize}
+  \bigskip
+  \begin{alertblock}{}
+    \centering
+    \textbr{The deterministic layer below the agent is where the guarantees live}.
+  \end{alertblock}
+\end{frame}
+\begin{frame}{Boundaries and open problems}{Active research questions}
+  \justifying
+  The integration of LLM agents into robotic stacks is an active research front.\\
+  Open questions include the following.
+  \begin{itemize}
+    \item \textbg{Grounding}: making sure the agent's plans refer to entities that actually exist in the robot's world.
+    \item \textbg{Evaluation}: how do you test a system whose behavior is partly emergent?
+    \item \textbg{Safety}: where do hard constraints live --- in the BT, in a separate runtime monitor, or in a dedicated safety layer?
+    \item \textbg{Real-time}: how to keep agent latency from leaking into time-critical loops.
+    \item \textbg{Cost and locality}: when can the agent run on-board vs in the cloud, with what trade-offs?
+  \end{itemize}
+\end{frame}
+
+% --- Closing thoughts ---
+\begin{frame}{Closing thoughts}
+  \justifying
+  \textbg{Behavior Trees did not replace Finite-State Machines}: they coexist, each fitting a different point in the complexity vs reactivity plane.\\
+  \bigskip
+  \textbg{LLM agents are not poised to replace BTs either: they extend the stack upward}, taking over the parts of the problem that humans used to do by hand --- understanding what the user wants, and assembling a plan to satisfy it.
+  \bigskip
+  \begin{block}{The right perspective}
+    \justifying
+    \textbf{The formalisms learned in this lecture are not made obsolete by agentic AI.}\\
+    They are \textbf{moved one level down}, becoming the deterministic substrate that makes agent-driven autonomy \textbf{trustable}.
+  \end{block}
+\end{frame}
