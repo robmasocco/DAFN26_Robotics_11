@@ -64,19 +64,6 @@
 \end{frame}
 
 % --- An integrated architecture ---
-\begin{frame}{An integrated architecture}{Layers}
-  \justifying
-  A reasonable architecture for an \textbg{agent-driven autonomous robot} integrates everything seen so far, in layers (or \emph{harnesses}):
-  \begin{itemize}
-    \item \textbg{input layer}: \textbg{NLP} and \textbg{scene-understanding} modules turn raw user input (text, voice, images) into a structured high-level request;
-    \item \textbg{agent layer}: an \textbg{LLM} in a tool-use loop, decomposes the request into calls;
-    \item \textbg{interface layer}: \textbg{MCP server} (or a CLI bridge) exposing robot capabilities to the agent;
-    \item \textbg{orchestration layer}: a \textbg{deterministic BT executor} consuming the agent's structured calls;
-    \item \textbg{execution layer}: the \textbg{ROS 2 nodes} that implement algorithms and drive the hardware.
-  \end{itemize}
-  \bigskip
-  Each layer's output feeds the next; \textbg{telemetry and state} flow back up.
-\end{frame}
 \begin{frame}{An integrated architecture}{The stack}
   \begin{figure}
     \centering
@@ -118,6 +105,19 @@
       \node[font=\scriptsize, gray!70, rotate=90, anchor=south] at (-4.0,-3.3) {telemetry};
     \end{tikzpicture}
   \end{figure}
+\end{frame}
+\begin{frame}{An integrated architecture}{Layers}
+  \justifying
+  A reasonable architecture for an \textbg{agent-driven autonomous robot} integrates everything seen so far, in layers (or \emph{harnesses}):
+  \begin{itemize}
+    \item \textbg{input layer}: \textbg{NLP} and \textbg{scene-understanding} modules turn raw user input (text, voice, images) into a structured high-level request;
+    \item \textbg{agent layer}: an \textbg{LLM} in a tool-use loop, decomposes the request into calls;
+    \item \textbg{interface layer}: \textbg{MCP server} (or a CLI bridge) exposing robot capabilities to the agent;
+    \item \textbg{orchestration layer}: a \textbg{deterministic BT executor} consuming the agent's structured calls;
+    \item \textbg{execution layer}: the \textbg{ROS 2 nodes} that implement algorithms and drive the hardware.
+  \end{itemize}
+  \bigskip
+  Each layer's output feeds the next; \textbg{telemetry and state} flow back up.
 \end{frame}
 
 % --- Boundaries and open problems ---

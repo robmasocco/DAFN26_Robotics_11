@@ -9,9 +9,9 @@
 % --- Automata in robotic systems ---
 \begin{frame}{Automata in robotic systems}
   \justifying
-  Beyond the lower layers of perception, planning and control, every modern \textbg{autonomous system} needs an \textbg{orchestration layer}: the top of the stack where everything has become a software abstraction, \textbg{user input} can be parsed, and the \textbg{mission} is executed.\\
+  Beyond the lower layers of perception, planning, and control, every modern \textbg{autonomous system} needs an \textbg{orchestration layer}: the top of the stack where everything has become a \textbg{software abstraction}, \textbg{user input} can be parsed, and the \textbg{mission} is \textbg{executed}.\\
   \bigskip
-  This deck presents this layer through \textbg{three families}.
+  We present \textbg{three families} of possible \textbg{implementations} for this layer.
   \begin{itemize}
     \item \textbg{Finite-state machines}: the traditional starting point.
     \item \textbg{Behavior trees}: when FSMs become unwieldy.
@@ -24,17 +24,17 @@
     This is unrelated to the formal-language automata seen in other courses.
   \end{block}
 \end{frame}
-\begin{frame}{Automata in robotic systems}{Section roadmap}
-  \justifying
-  In this section, we focus on \textbg{finite-state machines}, covering
-  \begin{itemize}
-    \item formal \textbg{definition} and \textbg{representations};
-    \item the \textbg{passive} vs \textbg{active} distinction;
-    \item an active FSM \textbg{implementation} with ROS 2 capabilities via \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}};
-    \item a \textbg{real use case} from the Leonardo Drone Contest;
-    \item where this approach starts to \textbg{break down}.
-  \end{itemize}
-\end{frame}
+% \begin{frame}{Automata in robotic systems}{Section roadmap}
+%   \justifying
+%   In this section, we focus on \textbg{finite-state machines}, covering
+%   \begin{itemize}
+%     \item formal \textbg{definition} and \textbg{representations};
+%     \item the \textbg{passive} vs \textbg{active} distinction;
+%     \item an active FSM \textbg{implementation} with ROS 2 capabilities via \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}};
+%     \item a \textbg{real use case} from the Leonardo Drone Contest;
+%     \item where this approach starts to \textbg{break down}.
+%   \end{itemize}
+% \end{frame}
 
 % --- Finite-state machines ---
 \begin{frame}{Finite-state machines}{Definition}
@@ -48,10 +48,10 @@
       \item $\Sigma$ is a finite set of \textbf{input symbols} (events, triggers);
       \item $\delta : S \times \Sigma \to S$ is the \textbf{transition function};
       \item $s_0 \in S$ is the \textbf{initial state};
-      \item $F \subseteq S$ is the set of \textbf{terminal} (or accepting) \textbf{states}.
+      \item $F \subseteq S$ is the set of \textbf{terminal} (or \emph{accepting}) \textbf{states}.
     \end{itemize}
   \end{block}
-  At any time the machine is in \textbg{exactly one state} from $S$; an incoming event triggers a transition according to $\delta$.
+  At any time, the machine is in \textbg{exactly one state} from $S$; an incoming event \textbg{triggers a transition} according to $\delta$.
 \end{frame}
 \begin{frame}{Finite-state machines}{The transition table}
   \justifying
@@ -104,8 +104,9 @@
   \justifying
   An \textbg{active} FSM \textbg{embeds execution logic}: a routine is associated to each state, and is \textbg{executed when the state is entered}.\\
   \bigskip
-  The routine's \textbg{return value} becomes the \textbg{trigger} for the next transition.\\
-  The machine \textbg{progresses autonomously} until a \textbg{terminal state} is reached.
+  The routine's \textbg{return value} may be the \textbg{trigger} for the next transition.\\
+  The machine \textbg{progresses autonomously} until a \textbg{terminal state} is reached.\\
+  \bigskip
   \begin{block}{}
     \centering
     \textbf{Active FSMs are full executors of a mission or process.}
@@ -147,7 +148,7 @@
 % --- transitions_ros ---
 \begin{frame}{\texttt{transitions\_ros}}
   \justifying
-  Our reference implementation is the \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}} Python library, built on top of the popular \href{https://github.com/pytransitions/transitions}{\color{blue}\underline{\texttt{transitions}}} Python package.\\
+  Our reference implementation is the \href{https://github.com/dotX-Automation/transitions_ros}{\color{blue}\underline{\texttt{transitions\_ros}}} Python library, built on top of the \href{https://github.com/pytransitions/transitions}{\color{blue}\underline{\texttt{transitions}}} Python package.\\
   \bigskip
   Where \texttt{transitions} focuses on FSMs as \textbg{state trackers} attached to arbitrary objects,\\\texttt{transitions\_ros} focuses on the FSM as a \textbg{controller}, and adds
   \begin{itemize}
@@ -256,7 +257,7 @@ states_table = [
   \begin{columns}
     \column{.5\linewidth}
     \justifying
-    Mission is linear and without reactive behaviors, but
+    Mission appears linear and \textbg{without reactive behaviors}, but
     \begin{itemize}
       \item \textbg{some steps require listening for events}, \emph{e.g.}, a target is found;
       \item \textbg{must account for every abnormal condition}, \emph{e.g.},
@@ -285,30 +286,7 @@ states_table = [
     \caption{\href{https://ietresearch.onlinelibrary.wiley.com/doi/pdf/10.1049/csy2.12083}{\color{blue}\underline{\textbf{Complete hierarchical software architecture scheme (2021).}}}}
   \end{figure}
 \end{frame}
-\begin{frame}{Use case: Leonardo Drone Contest}{Hierarchical FSM diagram of LDC21 -- outer level}
-  \begin{figure}
-    \centering
-    \resizebox{\textwidth}{!}{
-      \begin{tikzpicture}[->,
-                          >=latex,
-                          shorten >=1pt,
-                          auto,
-                          node distance=6cm,
-                          semithick]
-          \node[state] (SETUP)                        {SETUP};
-          \node[state] (RUNNING)   [right of=SETUP]   {RUNNING};
-          \node[state] (TERMINATE) [right of=RUNNING] {TERMINATE};
-          \path[]
-              (SETUP)   edge                      node [above] {start mission}     (RUNNING)
-              (RUNNING) edge [bend left=50]       node [above] {mission completed} (TERMINATE)
-                        edge [bend left=25]       node [above] {takeoff fail}      (TERMINATE)
-                        edge [bend right=25]      node [below] {land fail}         (TERMINATE)
-                        edge [bend right=50]      node [below] {abort mission}     (TERMINATE);
-      \end{tikzpicture}
-    }
-  \end{figure}
-\end{frame}
-\begin{frame}{Use case: Leonardo Drone Contest}{Hierarchical FSM diagram of LDC21 -- inner level}
+\begin{frame}{Use case: Leonardo Drone Contest}{FSM diagram of LDC21}
   \begin{figure}
     \centering
     \resizebox{\textwidth}{!}{
@@ -325,6 +303,9 @@ states_table = [
             \node[state, align=center] (LND)  [right of=PL]       {LANDED};
             \node[state, align=center] (SP)   [below of=PL]       {SEARCH\\PAD};
             \node[state, align=center] (TK)   [below of=LND]      {TAKEOFF};
+            \node[state, align=center] (TM)   [below of=EXPL]     {TERMINATE};
+            \draw[->] (0,-2.5) -- (TM) node[anchor=south, inner sep=2pt, midway, sloped] {aborted};
+            \draw[->] (0,-4.5) -- (TM) node[anchor=north, inner sep=2pt, midway, sloped] {completed};
             \path[]
                 (FT)   edge                    node [above]         {tko ok}     (EXPL)
                 (EXPL) edge                    node [above]         {seq}        (NAV)
@@ -335,7 +316,8 @@ states_table = [
                 (SP)   edge [bend left=15]     node [left]          {reached}    (PL)
                        edge [bend left=10]     node [sloped, below] {change pad} (NAV)
                 (LND)  edge                    node [right]         {new pad}    (TK)
-                (TK)   edge [out=-90, in=-90]  node [sloped, below] {airborne}   (NAV);
+                (TK)   edge [out=-90, in=-90]  node [sloped, below] {airborne}   (NAV)
+                ;
         \end{tikzpicture}
     }
   \end{figure}
@@ -369,7 +351,7 @@ states_table = [
   \justifying
   As soon as the mission becomes \textbg{reactive} --- the robot must continuously \textbg{monitor multiple conditions} --- \textbg{FSMs start to show their limitations}:
   \begin{itemize}
-    \item \textbg{every monitored condition must be checked inside every routine}, or the event is missed;
+    \item \textbg{every monitored condition must be checked inside every routine}, else the event is missed;
     \item \textbg{adding a new condition often means touching many transitions} at once;
     \item \textbg{recovery and error-handling paths quickly outnumber the nominal ones}.
   \end{itemize}
