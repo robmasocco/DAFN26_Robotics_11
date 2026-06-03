@@ -91,14 +91,9 @@
   \justifying
   Leaves are where the tree meets the rest of the system.
   \begin{itemize}
-    \item \textbg{Action nodes}: do actual work --- move the robot, call a service, run a computation. They \textbg{may be asynchronous}, and can return \texttt{RUNNING} until completion.
     \item \textbg{Condition nodes}: evaluate a predicate --- is the battery full? is the target visible? They are \textbg{synchronous} and can only return \texttt{SUCCESS} or \texttt{FAILURE}.
+    \item \textbg{Action nodes}: do actual work --- move the robot, call a service, run a computation. They \textbg{may be asynchronous}, and can return \texttt{RUNNING} until completion.
   \end{itemize}
-  \bigskip
-  \begin{block}{}
-    \centering
-    \textbf{Conditions never block; actions may.}
-  \end{block}
 \end{frame}
 
 % --- Control nodes ---
@@ -111,7 +106,7 @@
     \item \textbg{Parallel}: tick all children in the same cycle.
   \end{itemize}
   \bigskip
-  Each family has \textbg{plain} and \textbg{reactive} variants, with subtly different semantics.
+  Sequence and Fallback have \textbg{plain} and \textbg{reactive} variants, with subtly different semantics.
 \end{frame}
 \begin{frame}{Control nodes}{Sequence and Fallback}
   \justifying

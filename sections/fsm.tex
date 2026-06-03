@@ -55,11 +55,11 @@
 \end{frame}
 \begin{frame}{Finite-state machines}{The transition table}
   \justifying
+  $\delta$ must be \textbg{well-defined}: every (state, trigger) pair must have at most one outgoing transition, otherwise the machine is non-deterministic and a different formalism is needed.\\
+  \bigskip
   In practice, $\delta$ is encoded as a \textbg{table}: each \textbg{row} associates a \textbg{source state}, a \textbg{trigger}, and a \textbg{destination state}.\\
   \bigskip
-  This is the form FSMs take in code: a \textbg{list} of triples, easy to read and easy to extend.\\
-  \bigskip
-  $\delta$ must be \textbg{well-defined}: every (state, trigger) pair must have at most one outgoing transition, otherwise the machine is non-deterministic and a different formalism is needed.
+  This is the form FSMs take in code: a \textbg{list} of triples, easy to read and easy to extend.
 \end{frame}
 \begin{frame}{Finite-state machines}{Diagrammatic representation}
   \justifying
@@ -77,8 +77,7 @@
       \path
         (idle) edge node[above] {start} (moving)
         (moving) edge node[above] {reached} (arrived)
-        (moving) edge[bend left=40] node[below] {abort} (idle)
-        (arrived) edge[bend left=55] node[below] {reset} (idle);
+        (moving) edge[bend left=40] node[below] {abort} (idle);
     \end{tikzpicture}
     \caption{A simple 3-state FSM controlling a motion task.}
   \end{figure}
@@ -118,7 +117,7 @@
   \justifying
   Each step of an \textbg{active FSM} follows a \textbg{fixed cycle}:
   \begin{enumerate}
-    \item the machine is in a \textbg{state} $s$ with \textbg{associated routine} $R_s$;
+    \item the machine is in a \textbg{state} $s \in S$ with \textbg{associated routine} $R_s$;
     \item $R_s$ is invoked and \textbg{runs to completion};
     \item $R_s$ \textbg{returns a trigger} $t \in \Sigma$;
     \item the machine looks up $\delta(s, t) = s'$ and \textbg{transitions} to $s'$;
