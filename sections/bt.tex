@@ -87,9 +87,11 @@
     The \textbf{return value flows up} the tree from the ticked node to the root: each control node interprets the statuses of its children and computes its own status from them.
   \end{block}
 \end{frame}
-\begin{frame}{Behavior trees}{Leaves}
+
+% --- Leaf nodes ---
+\begin{frame}{Leaf nodes}{Overview}
   \justifying
-  Leaves are where the tree meets the rest of the system.
+  Leaves are where the tree interacts with the rest of the system.
   \begin{itemize}
     \item \textbg{Condition nodes}: evaluate a predicate --- is the battery full? is the target visible? They are \textbg{synchronous} and can only return \texttt{SUCCESS} or \texttt{FAILURE}.
     \item \textbg{Action nodes}: do actual work --- move the robot, call a service, run a computation. They \textbg{may be asynchronous}, and can return \texttt{RUNNING} until completion.
@@ -99,14 +101,17 @@
 % --- Control nodes ---
 \begin{frame}{Control nodes}{Overview}
   \justifying
-  \texttt{BT.CPP} provides three main families of \textbg{nodes that control the execution flow}:
+  \texttt{BT.CPP} provides a variety of \textbg{nodes that control the execution flow}.\\
+  Just some examples that are most frequently used...
   \begin{itemize}
-    \item \textbg{Sequence}: run children one after the other, all must succeed (AND);
-    \item \textbg{Fallback} (or \textbg{Selector}): try children in order, at least one must succeed (OR);
+    \item \textbg{Sequence}: run children one after the other, all must succeed (AND).
+    \item \textbg{Fallback} (or \textbg{Selector}): try children in order, at least one must succeed (OR).
     \item \textbg{Parallel}: tick all children in the same cycle.
+    \item \textbg{IfThenElse}: evaluate a condition on the first branch, then execute the second or the third.
+    \item \textbg{TryCatch}: execute the first N-1 branches, fall back to the N-th in case of an error.
   \end{itemize}
   \bigskip
-  Sequence and Fallback have \textbg{plain} and \textbg{reactive} variants, with subtly different semantics.
+  Sequence, Fallback, IfThenElse have \textbg{plain} and \textbg{reactive} variants, with subtly different semantics.
 \end{frame}
 \begin{frame}{Control nodes}{Sequence and Fallback}
   \justifying
@@ -124,7 +129,7 @@
   \bigskip
   \begin{block}{Memory of plain controls}
     \justifying
-    On a re-tick after \texttt{RUNNING}, \textbf{plain controls resume from the running child}, skipping the children that have already completed.
+    On a re-tick after \texttt{RUNNING}, \textbf{plain controls resume from the running child}, skipping the children that have already completed (\emph{i.e.}, they \textbf{do not re-check previous conditions}).
   \end{block}
 \end{frame}
 \begin{frame}{Control nodes}{Two examples}
@@ -164,7 +169,7 @@
 \end{frame}
 \begin{frame}{Control nodes}{Reactive variants}
   \justifying
-  \textbg{ReactiveSequence} and \textbg{ReactiveFallback} differ from their plain siblings on one point: on a re-tick, they do not skip the already-completed children.\\
+  \textbg{ReactiveSequence}, \textbg{ReactiveFallback}, and \textbg{WhileDoElse} differ from their plain siblings on one point: on a re-tick, they do not skip the already-completed children.\\
   They \textbg{re-tick every child from the first one, every tick}.\\
   \bigskip
   This is essential when \textbg{preconditions can change during execution}: a condition that succeeded one tick ago may have flipped, and a reactive control will catch it; a plain one will not.\\
