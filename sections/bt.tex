@@ -206,14 +206,14 @@
       cond/.style={draw, rounded corners=8pt, fill=orange!20, minimum width=1.75cm, minimum height=0.55cm, thick},
       edge from parent/.style={draw, thick}
     ]
-      \node[ctrl] {Parallel\\$s=3$, $f=2$}
+      \node[ctrl] {Parallel\\$s=3$, $f=1$}
       child {node[cond] {SystemOK?}}
       child {node[cond] {BatteryOK?}}
       child {node[act]  {TrackTarget}}
       child {node[act]  {AvoidObstacles}}
       child {node[act]  {UpdateMap}};
     \end{tikzpicture}
-    \caption{A \texttt{Parallel} node with thresholds \texttt{min\_success=3} and \texttt{min\_failure=2}: the subtree succeeds as soon as any three children succeed, and fails as soon as any two children fail; every remaining \texttt{RUNNING} child is halted.}
+    \caption{A \texttt{Parallel} node with thresholds \texttt{min\_success=3} and \texttt{min\_failure=1}: the subtree succeeds as soon as any three children succeed (supposedly, the first three), and fails as soon as any child fails; every remaining \texttt{RUNNING} child is halted.}
   \end{figure}
 \end{frame}
 \begin{frame}{Control nodes}{Concurrency, not parallelism}
